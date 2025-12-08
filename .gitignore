@@ -1,0 +1,80 @@
+# ------------------------------
+#   LARGE DATASET FILES
+# ------------------------------
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+*.gz
+*.csv
+*.parquet
+*.h5
+*.hdf5
+*.npy
+*.npz
+*.pkl
+*.pickle
+
+# Ignore dataset folders
+data/
+datasets/
+raw_data/
+input/
+large_files/
+storage/
+
+# ------------------------------
+#   GOOGLE COLAB ARTIFACTS
+# ------------------------------
+.ipynb_checkpoints/
+colab/
+# Colab temporary files
+*.swp
+*.swo
+
+# ------------------------------
+#   JUPYTER NOTEBOOK ARTIFACTS
+# ------------------------------
+.ipynb_checkpoints/
+.jupyter/
+*.nbconvert.ipynb
+
+# ------------------------------
+#   PYTHON ARTIFACTS
+# ------------------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pkl
+*.log
+
+# Virtual environments
+.env
+.venv/
+venv/
+ENV/
+env/
+
+# ------------------------------
+#   VS CODE ARTIFACTS
+# ------------------------------
+.vscode/
+.history/
+
+# Python extension settings
+.python-version
+
+# ------------------------------
+#   SYSTEM FILES
+# ------------------------------
+.DS_Store
+Thumbs.db
+
+# ------------------------------
+#   OTHER TOOL FILES
+# ------------------------------
+*.bak
+*.tmp
+*.temp
