@@ -1,0 +1,9 @@
+Libraries required
+
+flask
+requests
+numpy
+scikit-learn
+joblib
+pandas
+xgboost
