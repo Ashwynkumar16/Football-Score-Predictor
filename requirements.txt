@@ -7,3 +7,4 @@ scikit-learn
 joblib
 pandas
 xgboost
+python-dotenv
