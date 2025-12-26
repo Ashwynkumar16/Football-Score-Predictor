@@ -87,3 +87,105 @@ def get_upcoming_fixtures():
                 "to":to_date
             }
         ).json()
+
+        if response and response.get('response'):
+            for fixture in response['response']:
+                fixture_id=fixture["fixture"]["id"]
+                #Extract only the forst 10 char
+                date=fixture['fixture']['date'][:10]
+                home_team=fixture['teams']['home']['name']
+                away_team=fixture['teams']['away']['name']
+                home_team_id=fixture['teams']['home']['id']
+                away_team_id=fixture['teams']['away']['id']
+                home_logo=fixture['teams']['home'].get("logo","")
+                away_logo=fixture['teams']['away'].get("logo","")
+
+                matches.append({
+                    "league":league_name,
+                    "league_id":league_id,
+                    "fixture_id":fixture_id,
+                    "date":date,
+                    "home_team":home_team,
+                    "away_team":away_team,
+                    "home_team_id":home_team_id,
+                    "away_team_id":away_team_id,
+                    "home_logo":home_logo,
+                    "away_logo":away_logo,
+                    "season":current_season
+                })
+        
+        else:
+            print(f"[DEBUG] No matches for {league_name} (ID={league_id})")
+    return matches
+
+
+#Get fixtures played by a team from the start of the season up to a given date
+
+def get_team_fixtures(team_id,league_id,season,fixture_date):
+    url=f"{API_BASE_URL}/fixtures"
+    season_start=f"{season}-08-01"
+    params={
+        "team":team_id,
+        "league":league_id,
+        "season":season,
+        "from":season_start,
+        "to":fixture_date,
+        "status":"FT"   #only finished games
+    }
+
+    print(f"[DEBUG] GET request on {url} with params: {params}")
+    response=requests.get(url,headers=HEADERS, params=params).json()
+    print(f"[DEBUG] Raw response: {response.get('results',0)} results.")
+    fixtures=[]
+    if response and response.get('response'):
+        for fix in response['response']:
+            fixtures.append(fix['feature']['id'])
+    return fixtures
+
+def get_fixture_statistics(fixture_id,team_id):
+    url=f"{API_BASE_URL}/fixtures/statistics"
+    params={"fixture":fixture_id,"team":team_id}
+    response=requests.get(url,headers=HEADERS,params=params)
+    if response and response.get("response") and len(response['response'])>0:
+        return response['response'][0].get('statistics',[])
+    return []
+
+#aggregate stats match by match (via/fixtures/statistics)
+
+def agg_fixture_stats(team_id,league_id,season,fixture_date):
+    mapping={
+    "Ball Possession": "possessionPct",
+    "Fouls": "foulsCommitted",
+    "Yellow Cards": "yellowCards",
+    "Red Cards": "redCards",
+    "Corner Kicks": "wonCorners",
+    "Goalkeeper Saves": "saves",
+    "Total Shots": "totalShots",
+    "Shots on Goal": "shotsOnTarget",
+    "Blocked Shots": "blockedShots",
+    "Total passes": "totalPasses",
+    "Passes accurate": "accuratePasses"
+    }
+    agg={
+    "possessionPct_sum": 0.0,
+    "count_possession": 0,
+    "foulsCommitted": 0,
+    "yellowCards": 0,
+    "redCards": 0,
+    "wonCorners": 0,
+    "saves": 0,
+    "totalShots": 0,
+    "shotsOnTarget": 0,
+    "blockedShots": 0,
+    "totalPasses": 0,
+    "accuratePasses": 0     
+    }
+
+    fixtures=get_team_fixtures(team_id,league_id,season,fixture_date)
+    if not fixtures:
+        print(f"[DEBUG] No fixture found for team {team_id} upto {fixture_date}.")
+        return agg
+
+    for fix_id in fixtures:
+        stats_list=get_fixture_statistics(fix_id,team_id)
+        
