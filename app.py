@@ -54,3 +54,36 @@ except Exception as e:
 
 #Flask Initialisation
 app=Flask(__name__)
+
+#Season management functions
+def get_current_season():
+    today=datetime.today()
+    year=today.year
+    #If we're before aug, the current season is the prev year
+    return year -1 if today.month<8 else year
+
+def get_season_end(season):
+    #For a season starting in August, set the end to May 31 of the following year
+    return datetime(season+1,month=5, day=31)
+
+#Retrieve Upcoming matches
+def get_upcoming_fixtures():
+    print("[DEBUG] Retrieving upcoming matches for the next 7 days...")
+    matches=[]
+    today=datetime.today
+    from_date=today.strftime('%Y-%m-%d')
+    to_date=(today +timedelta(days=7)).strftime('%Y-%m-%d')
+    current_season=get_current_season
+
+    for league_name, league_id in LEAGUE_IDS.items():
+        print(f"[DEBUG] {league_name} (ID={league_id}), season={current_season} from {from_date} to {to_date}")
+        response=requests.get(
+            url=f"{API_BASE_URL}/fixtures",
+            headers=HEADERS,
+            params={
+                "league":league_id,
+                "season":current_season,
+                "from":from_date,
+                "to":to_date
+            }
+        ).json()
