@@ -47,7 +47,7 @@
             width: 24px;
             height: 24px;
             vertical-align: middle;
-            margin-right: px;
+            margin-right: 5px;
         }
         /*----SCORE BOXES----*/
         .score-container {
@@ -78,7 +78,7 @@
             cursor: pointer;
             font-weight: bold;
             position: relative;
-            transition: background-coloe 0.3s;
+            transition: background-color 0.3s;
 
         }
         .predict-btn:hover{
@@ -118,7 +118,7 @@
     </style>
 
     <script>
-        function predictMatch(fixtureId,homeTeamId,awayTeamId,league) {
+        function predictMatch(fixtureId,homeTeamId,awayTeamId,leagueId,season) {
             const button = document.getElementById("btn-"+fixtureId);
             const spinner=button.querySelector(".spinner");
             const btnText=button.querySelector(".btn-text");
@@ -132,7 +132,7 @@
                 fixture_id: fixtureId,
                 home_team_id: homeTeamId,
                 away_team_id:awayTeamId,
-                league_id:league_id,
+                league_id:leagueId,
                 season:season
             };
 
@@ -147,7 +147,7 @@
                 if (data.error) {
                     alert("Error: "+data.error);
                     btnText.style.display='inline-block';
-                    button.disabled="false";
+                    button.disabled=false;
                     return;
                 }
                 //Display the score in green boxes
@@ -161,15 +161,16 @@
                 //Keep this button disabled to prevent multiple click
             })
             .catch(err=> {
-                spinner.style.display-'none';
+                spinner.style.display='none';
                 btnText.style.display='inline-block';
                 button.disabled=false;
                 alert("Request error: " + err)
             });
         }
     </script>
-    <body>
-        <h1>MATCH PREDICTIONS</h1>
+</head>
+<body>
+    <h1>MATCH PREDICTIONS</h1>
         <table>
             <thead>
                 <tr>
@@ -182,7 +183,7 @@
             </thead>
             <tbody>
                 {% if matches and matches|length>0%}
-                    {%for match on matches}
+                    {% for match in matches %}
                     <tr>
                         <td>{{match.date}}</td>
                         <td>{{ match.league }}</td>
@@ -201,7 +202,13 @@
                         </td>
                         <td>
                             <button class="predict-btn" id ="btn-{{match.fixture_id}}"
-                                onclick="predictMatch('{{match.fixture_id}}','{{match.home_team_id}},{{ match.away_team_id }}','{{ match.league_id }}','{{ match.season }}')">
+                               onclick="predictMatch(
+                                    '{{ match.fixture_id }}',
+                                    '{{ match.home_team_id }}',
+                                    '{{ match.away_team_id }}',
+                                    '{{ match.league_id }}',
+                                    '{{ match.season }}'
+                                    )">
                                 <span class="btn-text">PREDICT SCORE</span>
                                 <div class="spinner"></div>
                             </button>
@@ -209,9 +216,14 @@
                     </tr>
                     {%endfor%}
                 {%else%}
-            
+                    <tr>
+                        <td colspan="5">
+                            <div class="no-matches">NO CLUB MATCHES FOUND FOR THIS PERIOD (INT'L BREAK OR END OF SEASON)</div>
+
+                        </td>
+                    </tr>
+                {%endif%}    
             </tbody>
         </table>
-    </body>
-</head>
+</body>
 </html>
