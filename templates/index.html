@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <title>MATCH PREDICTIONS</title>
+    <style>
+        /*------RESET BASE--------*/
+        *{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body{
+            background-color: #1c1c1c;
+            color: #f0f0f0;
+            font-family: Arial, sans-serif;
+            padding:1rem;
+
+        }
+        h1{
+            margin-bottom: 1rem;
+            text-align: center;
+            color: #fff; /*Title in WHite*/
+        }
+
+        /*-----TABLE STYLING*/
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0 auto;
+        }
+        thead tr{
+            background-color: #2b2b2b;
+        
+        }
+        th, td{
+            padding: 0.8rem;
+            text-align: center;
+            border-bottom: 1px solid #333;
+            vertical-align: middle;
+        }
+        tr:hover{
+            background-color: #292929;
+        }
+        /*-----TEAM LOGO------*/
+        .team-logo {
+            width: 24px;
+            height: 24px;
+            vertical-align: middle;
+            margin-right: px;
+        }
+        /*----SCORE BOXES----*/
+        .score-container {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+        }
+        .score-box{
+            width: 32px;
+            height: 32px;
+            background-color: #3a7f0d;
+            border: 2px solid #00ff00;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #fff;
+            margin: 0 4px;
+        }
+        /*----BUTTON + SPINNER*/
+        .predict-btn {
+            background-color: #007bff;
+            color: #fff;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            position: relative;
+            transition: background-coloe 0.3s;
+
+        }
+        .predict-btn:hover{
+            background-color: #0056b3;
+        }
+        .predict-btn:disabled{
+            background-color: #666;
+            cursor: not-allowed;
+        }
+        .btn-text{
+            display: inline-block;
+        }
+        .spinner{
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #fff;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%,-50%);
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            0% {transform: translate(-50%,-50%) rotate(0deg);}
+            100% {transform: translate(-50%,-50%) rotate(360deg);}
+        }
+        /*------ERROR / INFO MESSAGE--------*/
+        .no-matches {
+            color: #ff6600;
+            margin-top: 1rem;
+            text-align: center;
+            font-weight: bold;
+        }
+    </style>
+
+    <script>
+        function predictMatch(fixtureId,homeTeamId,awayTeamId,league) {
+            const button = document.getElementById("btn-"+fixtureId);
+            const spinner=button.querySelector(".spinner");
+            const btnText=button.querySelector(".btn-text");
+
+            //Disable button and hide text to show spinner
+            button.disabled=true;
+            btnText.style.display='none';
+            spinner.style.display='block';
+
+            const payload ={
+                fixture_id: fixtureId,
+                home_team_id: homeTeamId,
+                away_team_id:awayTeamId,
+                league_id:league_id,
+                season:season
+            };
+
+            fetch("/predict", {
+                method: 'POST',
+                headers: {"Content-Type":"application/json"},
+                body:JSON.stringify(payload)
+            })
+            .then(response => response.json())
+            .then(data=>{
+                spinner.style.display='none';
+                if (data.error) {
+                    alert("Error: "+data.error);
+                    btnText.style.display='inline-block';
+                    button.disabled="false";
+                    return;
+                }
+                //Display the score in green boxes
+                const parts=data.predicted_score.split(" - ");
+                if (parts.length===2) {
+                    document.getElementById("score-home-" + fixtureId).textContent=parts[0];
+                    document.getElementById("score-away-" + fixtureId).textContent=parts[1];
+
+                }
+                btnText.style.display='inline-block';
+                //Keep this button disabled to prevent multiple click
+            })
+            .catch(err=> {
+                spinner.style.display-'none';
+                btnText.style.display='inline-block';
+                button.disabled=false;
+                alert("Request error: " + err)
+            });
+        }
+    </script>
+    <body>
+        <h1>MATCH PREDICTIONS</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>DATE</th>
+                    <th>COMPETITION</th>
+                    <th>MATCH</th>
+                    <th>SCORES</th>
+                    <th>ACTION</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if matches and matches|length>0%}
+                    {%for match on matches}
+                    <tr>
+                        <td>{{match.date}}</td>
+                        <td>{{ match.league }}</td>
+                        <td>
+                            <img src="{{match.home_logo}}" alt="Logo of {{match.home_team}}" class ="team-logo" />
+                            {{match.home_team}}
+                            vs
+                            <img src="{{match.away_logo}}" alt = "Logo of {{match.away_team}}" class="team-logo" />
+                            {{match.away_team}}
+                        </td>
+                        <td>
+                            <div class="score-container">
+                                <div class="score-box" id="score-home-{{match.fixture_id}}">--</div>
+                                <div class="score-box" id = "score-away-{{match.fixture_id}}">--</div>
+                            </div>
+                        </td>
+                        <td>
+                            <button class="predict-btn" id ="btn-{{match.fixture_id}}"
+                                onclick="predictMatch('{{match.fixture_id}}','{{match.home_team_id}},{{ match.away_team_id }}','{{ match.league_id }}','{{ match.season }}')">
+                                <span class="btn-text">PREDICT SCORE</span>
+                                <div class="spinner"></div>
+                            </button>
+                        </td>
+                    </tr>
+                    {%endfor%}
+                {%else%}
+            
+            </tbody>
+        </table>
+    </body>
+</head>
+</html>
