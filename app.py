@@ -289,3 +289,82 @@ def process_match_data(fixture_id,home_team_id,away_team_id,league_id,season):
     }
     return features
 
+#Score Prediction via model
+
+def predict_match(fixture_id,home_team_id,away_team_id,league_id,season):
+    if model is None:
+        return {"erros":"Model unavialable or not loaded"}
+    features=process_match_data(fixture_id,home_team_id,away_team_id,league_id,season)
+    if features is None:
+        return {'error':"Insufficient data or fixture not found"}
+    expected_features = [
+    "leagueId",
+    "home_possessionPct",
+    "home_foulsCommitted",
+    "home_yellowCards",
+    "home_redCards",
+    "home_wonCorners",
+    "home_saves",
+    "home_totalShots",
+    "home_shotsOnTarget",
+    "home_accuratePasses",
+    "home_totalPasses",
+    "home_blockedShots",
+    "away_possessionPct",
+    "away_foulsCommitted",
+    "away_yellowCards",
+    "away_redCards",
+    "away_wonCorners",
+    "away_saves",
+    "away_totalShots",
+    "away_shotsOnTarget",
+    "away_blockedShots",
+    "home_gf",
+    "home_gd",
+    "away_ga",
+    "away_gd",
+    "home_shotConversion",
+    "away_shotConversion"
+    ]
+
+    ordered_features={key: features.get(key,0.0) for key in expected_features}
+    df_features=pd.DataFrame([ordered_features])
+    df_features[expected_features]=scaler.transform(df_features[expected_features])
+    print('[DEBUG] Features sent to model: ',df_features.iloc[0].to_dict())
+
+    prediction=model.predict(df_features)
+    score_home=int(prediction[0][0])
+    score_away=int(prediction[0][1])
+
+    return {"predicted_score": f"{score_home} - {score_away}"}
+
+#Flask routes
+
+@app.route("/")
+def index():
+    #retrieve matches from the past week
+    matches=get_upcoming_fixtures()
+    return render_template("index.html",matches=matches)
+
+@app.route("/predict",methods=['POST'])
+def predict():
+    data=request.json
+    required_keys=['fixture_id','home_team_id','away_team_id','league_id','season']
+    missing=[k for k in required_keys if k not in data]
+
+    if missing:
+        return jsonify({'error':f"The following keys are missing: {','.join(missing)} "}),400
+    
+    try: 
+        season=int(data['season'])
+    except ValueError:
+        return jsonify({'error':'season must be an integer'}),400
+    
+    result=predict_match(
+        data['fixture_id'],
+        data['home_team_id'],
+        data['away_team_id'],
+        data['league_id'],
+        season
+    )
+    return jsonify(result)
