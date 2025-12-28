@@ -17,12 +17,6 @@ API_BASE_URL = "https://v3.football.api-sports.io/"
 HEADERS = {
     "x-apisports-key": API_KEY
 }
-#Temp Debugging
-# response = requests.get(API_BASE_URL, headers=HEADERS)
-# print(response.status_code)
-# print(response.json())
-# print("KEY LENGTH:", len(API_KEY))
-# print("KEY PREVIEW:", API_KEY[:4], "****")
 
 LEAGUE_IDS={
     "Premier League": 39,
@@ -43,7 +37,7 @@ except Exception as e:
     model=None
 
 try:
-    scaler=joblib.load(SCALER_PATH)
+    scaler=joblib.load(SCALER_PATH) 
 except Exception as e:
     print(f"Error loading scaler: {0}")
     #If scaler is not available, we use identity scaler
@@ -56,6 +50,7 @@ except Exception as e:
 app=Flask(__name__)
 
 #Season management functions
+MIN_MATCH_COUNT=3
 def get_current_season():
     today=datetime.today()
     year=today.year
@@ -66,9 +61,16 @@ def get_season_end(season):
     #For a season starting in August, set the end to May 31 of the following year
     return datetime(season+1,month=5, day=31)
 
+def is_season_finished(season):
+    return datetime.today()>get_season_end(season)
+
+def get_season_for_fixtures():
+    current_season=get_current_season()
+    return current_season +1 if is_season_finished(current_season) else current_season
+
 #Retrieve Upcoming matches
-def get_upcoming_fixtures():
-    print("[DEBUG] Retrieving upcoming matches for the next 7 days...")
+def get_upcoming_fixtures():    #prepares date range and season to request upcoming matches
+    print("[DEBUG] Retrieving upcoming matches for the next 7 days...") #here we have done 7 days we can also do more
     matches=[]
     today=datetime.today
     from_date=today.strftime('%Y-%m-%d')
@@ -84,7 +86,8 @@ def get_upcoming_fixtures():
                 "league":league_id,
                 "season":current_season,
                 "from":from_date,
-                "to":to_date
+                "to":to_date,
+                "status": "NS"  # Not Started | Filters by status "NS" (Not Started) to exclude ongoing or completed games.
             }
         ).json()
 
