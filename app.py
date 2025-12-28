@@ -366,7 +366,7 @@ def index():
 
 @app.route("/predict",methods=['POST'])
 def predict():
-    data=request.json()
+    data=request.json
     required_keys=['fixture_id','home_team_id','away_team_id','league_id','season']
     missing=[k for k in required_keys if k not in data]
 
