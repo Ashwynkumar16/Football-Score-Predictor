@@ -188,4 +188,104 @@ def agg_fixture_stats(team_id,league_id,season,fixture_date):
 
     for fix_id in fixtures:
         stats_list=get_fixture_statistics(fix_id,team_id)
-        
+        for stat in stats_list:
+            stat_type=stat.get('type')
+            value=stat.get('value')
+            if value is None:
+                continue
+            if isinstance(value,str) and '%' in value:
+                try:
+                    value=float(value.replace("%",""))
+                except Exception:
+                    value=0.0
+            else:
+                try:
+                    value=float(value) 
+                except Exception:
+                    value=0.0
+
+            if stat_type in mapping:
+                key=mapping[stat_type]
+                if key=='possessionPct':
+                    agg['possessionPct_sum']+=value
+                    agg['count_possession']+=1
+                else:
+                      agg[key]+=value
+    agg['possessionPct']=(agg["possessionPct_sum"]/agg['count_possession']) if agg['count_possession'] >0 else 50.0
+    return agg
+
+#Retrieve stats voa /teams/statistics
+
+def get_team_goals(team_id,league_id,season):
+    url=f"{API_BASE_URL}/teams/statistics"
+    params={'team':team_id,'league':league_id,'season':season}
+    response=requests.get(url,headers=HEADERS,params=params)
+    goals={'gf':0.0,"ga":0.0}
+    if response and response.get('response'):
+        resp=response['response']
+        gf=resp.get('goals',{}).get('for',{}).get('total',{}).get('home',0)
+        ga=resp.get('goals',{}).get('against',{}).get('total',{}).get('home',0)
+        try:
+            goals["gf"]=float(gf)
+            goals['ga']=float(ga)
+        except Exception:
+            goals['gf']=0.0
+            goals['ga']=0.0
+    return goals
+
+#Build feature vector for a match
+
+def process_match_data(fixture_id,home_team_id,away_team_id,league_id,season):
+    url=f"{API_BASE_URL}/fixtures"
+    params={'id':fixture_id}
+    fix_data=requests.get(url,headers=HEADERS,params=params).json()
+    if not fix_data.get('response'):
+        print('[DEBUG] Fixture Non trouvee')
+        return None
+    fixture_date=fix_data['response'][0]['fixture']['date']
+    fixture_date_str=fixture_date[:10]
+
+    home_agg=agg_fixture_stats(home_team_id,league_id,season,fixture_date_str)
+    away_agg=agg_fixture_stats(away_team_id,league_id,season,fixture_date_str)
+
+    home_goals=get_team_goals(home_team_id,league_id,season)
+    away_goals=get_team_goals(away_team_id,league_id,season)
+
+    home_shotConversion=(home_agg['shotsOnTarget']/home_agg['totalShots']) if home_agg["totalShots"]>0 else 0.0
+    away_shotConversion = away_agg["shotsOnTarget"] / away_agg["totalShots"] if away_agg["totalShots"] > 0 else 0.0
+
+    features = {
+    "leagueId": float(league_id),
+
+    "home_possessionPct": home_agg.get("possessionPct", 50.0),
+    "home_foulsCommitted": home_agg.get("foulsCommitted", 0.0),
+    "home_yellowCards": home_agg.get("yellowCards", 0.0),
+    "home_redCards": home_agg.get("redCards", 0.0),
+    "home_wonCorners": home_agg.get("wonCorners", 0.0),
+    "home_saves": home_agg.get("saves", 0.0),
+    "home_totalShots": home_agg.get("totalShots", 0.0),
+    "home_shotsOnTarget": home_agg.get("shotsOnTarget", 8.0),
+    "home_accuratePasses": home_agg.get("accuratePasses", 0.0),
+    "home_totalPasses": home_agg.get("totalPasses", 0.0),
+    "home_blockedShots": home_agg.get("blockedShots", 0.0),
+
+    "away_possessionPct": away_agg.get("possessionPct", 50.0),
+    "away_foulsCommitted": away_agg.get("foulsCommitted", 0.0),
+    "away_yellowCards": away_agg.get("yellowCards", 0.0),
+    "away_redCards": away_agg.get("redCards", 0.0),
+    "away_wonCorners": away_agg.get("wonCorners", 0.0),
+    "away_saves": away_agg.get("saves", 0.0),
+    "away_totalShots": away_agg.get("totalShots", 0.0),
+    "away_shotsOnTarget": away_agg.get("shotsOnTarget", 0.0),
+    "away_blockedShots": away_agg.get("blockedShots", 0.0),
+
+    "home_gf": home_goals.get("gf", 0.0),
+    "home_gd": home_goals.get("gf", 0.0) - home_goals.get("ga", 0.0),
+    "away_ga": away_goals.get("ga", 0.0),
+    "away_gd": away_goals.get("gf", 0.0) - away_goals.get("ga", 0.0),
+
+    "home_shotConversion": home_shotConversion,
+    "away_shotConversion": away_shotConversion
+    }
+    return features
+
