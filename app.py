@@ -22,7 +22,7 @@ LEAGUE_IDS={
     "Premier League": 39,
     "La Liga":140,
     "Serie A":135,
-    "Bundeliga":78,
+    "Bundesiga":78,
     "Ligue 1": 61
 }
 
@@ -33,24 +33,24 @@ SCALER_PATH="models/api_features/scaler.pkl"
 try: 
     model=joblib.load(MODEL_PATH)
 except Exception as e:
-    print(f" Error loading model: {0}")
+    print(f" Error loading model: {e}")
     model=None
 
 try:
     scaler=joblib.load(SCALER_PATH) 
 except Exception as e:
-    print(f"Error loading scaler: {0}")
+    print(f"Error loading scaler: {e}")
     #If scaler is not available, we use identity scaler
-    class IdentityScaler: 
+    class IdentityScaler(): 
         def transform(self, X):
             return X
-    scaler=IdentityScaler
+    scaler=IdentityScaler()
 
 #Flask Initialisation
 app=Flask(__name__)
 
 #Season management functions
-MIN_MATCH_COUNT=3
+
 def get_current_season():
     today=datetime.today()
     year=today.year
@@ -72,10 +72,10 @@ def get_season_for_fixtures():
 def get_upcoming_fixtures():    #prepares date range and season to request upcoming matches
     print("[DEBUG] Retrieving upcoming matches for the next 7 days...") #here we have done 7 days we can also do more
     matches=[]
-    today=datetime.today
+    today=datetime.today()
     from_date=today.strftime('%Y-%m-%d')
     to_date=(today +timedelta(days=7)).strftime('%Y-%m-%d')
-    current_season=get_current_season
+    current_season=get_season_for_fixtures()
 
     for league_name, league_id in LEAGUE_IDS.items():
         print(f"[DEBUG] {league_name} (ID={league_id}), season={current_season} from {from_date} to {to_date}")
@@ -90,6 +90,9 @@ def get_upcoming_fixtures():    #prepares date range and season to request upcom
                 "status": "NS"  # Not Started | Filters by status "NS" (Not Started) to exclude ongoing or completed games.
             }
         ).json()
+        if response.get("errors"):
+            print(response["errors"])
+
 
         if response and response.get('response'):
             for fixture in response['response']:
@@ -138,17 +141,23 @@ def get_team_fixtures(team_id,league_id,season,fixture_date):
 
     print(f"[DEBUG] GET request on {url} with params: {params}")
     response=requests.get(url,headers=HEADERS, params=params).json()
+    if response.get("errors"):
+        print(response["errors"])
+
     print(f"[DEBUG] Raw response: {response.get('results',0)} results.")
     fixtures=[]
     if response and response.get('response'):
         for fix in response['response']:
-            fixtures.append(fix['feature']['id'])
+            fixtures.append(fix['fixture']['id'])
     return fixtures
 
 def get_fixture_statistics(fixture_id,team_id):
     url=f"{API_BASE_URL}/fixtures/statistics"
     params={"fixture":fixture_id,"team":team_id}
-    response=requests.get(url,headers=HEADERS,params=params)
+    response=requests.get(url,headers=HEADERS,params=params).json()
+    if response.get("errors"):
+        print(response["errors"])
+
     if response and response.get("response") and len(response['response'])>0:
         return response['response'][0].get('statistics',[])
     return []
@@ -222,12 +231,15 @@ def agg_fixture_stats(team_id,league_id,season,fixture_date):
 def get_team_goals(team_id,league_id,season):
     url=f"{API_BASE_URL}/teams/statistics"
     params={'team':team_id,'league':league_id,'season':season}
-    response=requests.get(url,headers=HEADERS,params=params)
+    response=requests.get(url,headers=HEADERS,params=params).json()
+    if response.get("errors"):
+        print(response["errors"])
+
     goals={'gf':0.0,"ga":0.0}
     if response and response.get('response'):
         resp=response['response']
         gf=resp.get('goals',{}).get('for',{}).get('total',{}).get('home',0)
-        ga=resp.get('goals',{}).get('against',{}).get('total',{}).get('home',0)
+        ga=resp.get('goals',{}).get('against',{}).get('total',{}).get('away',0)
         try:
             goals["gf"]=float(gf)
             goals['ga']=float(ga)
@@ -242,6 +254,9 @@ def process_match_data(fixture_id,home_team_id,away_team_id,league_id,season):
     url=f"{API_BASE_URL}/fixtures"
     params={'id':fixture_id}
     fix_data=requests.get(url,headers=HEADERS,params=params).json()
+    if fix_data.get("errors"):
+        print(fix_data["errors"])
+
     if not fix_data.get('response'):
         print('[DEBUG] Fixture Non trouvee')
         return None
@@ -296,7 +311,7 @@ def process_match_data(fixture_id,home_team_id,away_team_id,league_id,season):
 
 def predict_match(fixture_id,home_team_id,away_team_id,league_id,season):
     if model is None:
-        return {"erros":"Model unavialable or not loaded"}
+        return {"error":"Model unavailable or not loaded"}
     features=process_match_data(fixture_id,home_team_id,away_team_id,league_id,season)
     if features is None:
         return {'error':"Insufficient data or fixture not found"}
@@ -351,7 +366,7 @@ def index():
 
 @app.route("/predict",methods=['POST'])
 def predict():
-    data=request.json
+    data=request.json()
     required_keys=['fixture_id','home_team_id','away_team_id','league_id','season']
     missing=[k for k in required_keys if k not in data]
 
