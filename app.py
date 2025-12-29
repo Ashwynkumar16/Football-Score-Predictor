@@ -27,7 +27,7 @@ LEAGUE_IDS={
 }
 
 #Loading the model 
-MODEL_PATH="models/api_features/xgb.pkl"
+MODEL_PATH="models/api_features/model.pkl"
 SCALER_PATH="models/api_features/scaler.pkl"
 
 try: 
