@@ -41,7 +41,7 @@ try:
 except Exception as e:
     print(f"Error loading scaler: {e}")
     #If scaler is not available, we use identity scaler
-    class IdentityScaler(): 
+    class IdentityScaler: 
         def transform(self, X):
             return X
     scaler=IdentityScaler()
