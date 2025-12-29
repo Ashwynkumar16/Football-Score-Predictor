@@ -116,5 +116,5 @@ A short demo video showing the application running locally is available.
 **Ashwyn Kumar**  
 
 **B.Tech** Undergraduate at Netaji Subhas University of Technology **(NSUT)**, Delhi
-Linkedin: www.linkedin.com/in/ashwyn-kumar-948162359
-Github: Ashwynkumar16
+- Linkedin: www.linkedin.com/in/ashwyn-kumar-948162359
+- Github: Ashwynkumar16
