@@ -75,6 +75,7 @@ The model was trained on historical match data sourced from Kaggle.
 4. Create a .env file and save your API Key
     - API_FOOTBALL_KEY=your_api_key_here
 5. Run the application 
+    - MainNb.ipynb
     - python app.py
 6. Open the browser and go to:
     -http://localhost:5000
